@@ -8,6 +8,10 @@ Sn_Examinator::Sn_Examinator(const std::string& fileName)
     std::string readLine;
     std::vector<std::string> extractedVec;
 
+    std::random_device device;
+    m_randomGen.seed(device());
+    std::uniform_int_distribution<int> range(0, 100);
+
     if (!extractionFile.is_open())
     {
         std::cout << "Failed to open file " + fileName + "\n";
@@ -36,7 +40,18 @@ Sn_Examinator::Sn_Examinator(const std::string& fileName)
         if (nums.size() == 3)
         {
             Sn_Equation addEquation(nums.at(0), nums.at(1), nums.at(2));
-            Sn_Student addStudent(addEquation, "JohnDoe " + std::to_string(currEq));
+            int rolledChance = range(m_randomGen);
+            Sn_Student* addStudent;
+
+            int isGoodPercentage = 33;
+            int isBadPercentage = 33;
+
+            if (rolledChance > 100 - isGoodPercentage)
+                addStudent = new Sn_SmartStudent(addEquation, "JohnDoe " + std::to_string(currEq));
+            else if (rolledChance < isBadPercentage)
+                addStudent = new Sn_AverageStudent(addEquation, "JohnDoe " + std::to_string(currEq));
+            else
+                addStudent = new Sn_StupidStudent(addEquation, "JohnDoe " + std::to_string(currEq));
 
             m_students.push_back(std::make_pair(addStudent, addEquation));
         }
@@ -46,13 +61,22 @@ Sn_Examinator::Sn_Examinator(const std::string& fileName)
     extractionFile.close();
 }
 
+Sn_Examinator::~Sn_Examinator()
+{
+    for (int i = 0; i < m_students.size(); i++)
+    {
+        auto name = m_students.at(i).first;
+        delete name;
+    }
+}
+
 bool Sn_Examinator::checkStudent(int studentIndex)
 {
     if (studentIndex > m_students.size() - 1)
         return false;
 
     auto currPair = m_students.at(studentIndex);
-    auto rootsFirst = currPair.first.solveEquation();
+    auto rootsFirst = currPair.first->solveEquation();
     auto rootsTrue = currPair.second.getRoots();
 
     return compareRoots(rootsFirst, rootsTrue);
@@ -81,7 +105,7 @@ void Sn_Examinator::printTable()
     for (int i = 0; i < m_students.size(); i++)
     {
         bool result = checkStudent(i);
-        auto name = m_students.at(i).first.m_studentName;
+        auto name = m_students.at(i).first->m_studentName;
         std::cout << std::setw(4) << i;
         std::cout << " | " << std::setw(30) << name;
         if (result)
